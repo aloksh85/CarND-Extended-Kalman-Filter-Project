@@ -3,7 +3,7 @@
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-// Please note that the Eigen library does not initialize 
+// Please note that the Eigen library does not initialize
 // VectorXd or MatrixXd objects with zeros upon creation.
 
 KalmanFilter::KalmanFilter() {}
@@ -25,6 +25,8 @@ void KalmanFilter::Predict() {
   TODO:
     * predict the state
   */
+  x_ = F_*x_;
+  P_ = F_*P_*F_.transpose();
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
@@ -32,6 +34,14 @@ void KalmanFilter::Update(const VectorXd &z) {
   TODO:
     * update the state by using Kalman Filter equations
   */
+  y = z - H_*x_;
+  S = H_*P_*H_.transpose() + Q_;
+  K = P_*H_.transpose()*S.inverse();
+
+  x_ += K*y;
+  P_ =()
+
+
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
