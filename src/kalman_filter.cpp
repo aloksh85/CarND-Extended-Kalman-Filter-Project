@@ -49,7 +49,6 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
     * update the state by using Extended Kalman Filter equations
     *
   */
-
   Predict();
   Update(z);
 }

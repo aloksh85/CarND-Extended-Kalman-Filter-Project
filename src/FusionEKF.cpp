@@ -8,6 +8,8 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
+
+
 /*
  * Constructor.
  */
@@ -28,7 +30,7 @@ FusionEKF::FusionEKF() {
 
   //measurement covariance matrix - radar
   R_radar_ << 0.09, 0, 0,
-        0, 0.0009, 0,
+        0, 0.09, 0,
         0, 0, 0.09;
 
   /**
@@ -36,6 +38,13 @@ FusionEKF::FusionEKF() {
     * Finish initializing the FusionEKF.
     * Set the process and measurement noises
   */
+  ekf_.Q_ << 1.0, 0.0,  1.0,  0.0,
+              0.0, 1.0, 0.0, 1.0,
+              1.0, 0.0, 1.0, 0.0,
+              0.0, 1.0,  0.0,  1.0;
+
+  ekf_.R_ << 1.0,0.0,
+             0.0,1.0;
 
 
 }
@@ -67,11 +76,22 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       /**
       Convert radar from polar to cartesian coordinates and initialize state.
       */
+      VectorXd radar_measure = measurement_pack.raw_measurements_;
+      ekf_.x_(0) = radar_measure(0)*cos(radar_measure(1));
+      ekf_.x_(1) = radar_measure(0)*sin(radar_measure(1));
+      ekf_.x_(2) = radar_measure(2)*cos(radar_measure(1));
+      ekf_.x_(3) = radar_measure(2)*sin(radar_measure(1));
+
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       /**
       Initialize state.
       */
+      VectorXd lidar_measure  = measurement_pack.raw_measurements_;
+      ekf_.x_(0) = lidar_measure(0);
+      ekf_.x_(1) = lidar_measure(1);
+      ekf_.x_(2) = 0.0;
+      ekf_.x_(3) = 0.0;
     }
 
     // done initializing, no need to predict or update
