@@ -8,7 +8,15 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-
+VectorXd compute_hx(VectorXd &x)
+{
+  VectorXd h_x;
+  h_x<<0.0,0.0,0.0;
+  h_x(0) = sqrt(pow(x(0),2) + pow(x(1),2));
+  h_x(1) = atan(x(1)/x(0));
+  h_x(2) = ((x(0)*x(2)) + (x(1)*x(3)))/h_x(0);
+  return h_x;
+}
 
 /*
  * Constructor.
@@ -45,6 +53,10 @@ FusionEKF::FusionEKF() {
 
   ekf_.R_ << 1.0,0.0,
              0.0,1.0;
+
+  ekf_.H_<<1.0,0.0,0.0,0.0,
+           0.0,1.0,0.0,0.0;
+
 
 
 }
@@ -92,6 +104,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       ekf_.x_(1) = lidar_measure(1);
       ekf_.x_(2) = 0.0;
       ekf_.x_(3) = 0.0;
+
+
     }
 
     // done initializing, no need to predict or update
@@ -142,8 +156,23 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // Radar updates
-  } else {
+    auto z = measurement_pack.raw_measurements_;
+    auto h_x = compute_hx(ekf_.x_);
+    auto y = z - h_x;
+    ekf_.H_ = tools .CalculateJacobian(ekf_.x_);
+    ekf_.R_ = R_radar_;
+    auto S = ekf_.H_*ekf_.P_*ekf_.H_.transpose() + ekf_.Q_;
+    auto K = ekf_.P_*ekf_.H_.transpose()*S.inverse();
+    ekf_.x_ += K*y;
+    auto I =  MatrixXd::Identity(4,4);
+    ekf_.P_ =(I-K*ekf_.H_)*ekf_.P_;
+    }
+
+    else {
     // Laser updates
+    auto z = measurement_pack.raw_measurements_;
+    ekf_.R_ = R_laser_;
+    ekf_.Update(z);
   }
 
   // print the output
