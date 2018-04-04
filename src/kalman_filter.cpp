@@ -1,8 +1,9 @@
 #include "kalman_filter.h"
+#include <iostream>
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
-
+using namespace std;
 // Please note that the Eigen library does not initialize
 // VectorXd or MatrixXd objects with zeros upon creation.
 
@@ -25,15 +26,13 @@ void KalmanFilter::Predict() {
   TODO:
     * predict the state
   */
+  std::cout<<F_<<std::endl;
   x_ = F_*x_;
   P_ = F_*P_*F_.transpose();
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Kalman Filter equations
-  */
+
   auto y = z - H_*x_;
   auto S = H_*P_*H_.transpose() + Q_;
   auto K = P_*H_.transpose()*S.inverse();
@@ -43,6 +42,22 @@ void KalmanFilter::Update(const VectorXd &z) {
   P_ =(I-K*H_)*P_;
 }
 
+
+void KalmanFilter::LidarUpdate(const VectorXd &z,
+                              const MatrixXd &R,
+                              const MatrixXd& H) {
+
+  VectorXd y = z - H*x_;
+  MatrixXd S = H*P_*H.transpose() + R;
+  MatrixXd K = P_*H.transpose()*S.inverse();
+  cout<<"K size: "<<K.size()<<endl;
+  x_ += K*y;
+
+  auto I =  MatrixXd::Identity(4,4);
+
+  P_ = (I-K*H)*P_;
+
+}
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
   /**
   TODO:

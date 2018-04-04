@@ -57,6 +57,9 @@ public:
    * @param z The measurement at k+1
    */
   void Update(const Eigen::VectorXd &z);
+  void LidarUpdate(const Eigen::VectorXd &z,
+                                const Eigen::MatrixXd& R,
+                                const Eigen::MatrixXd& H);
 
   /**
    * Updates the state by using Extended Kalman Filter equations

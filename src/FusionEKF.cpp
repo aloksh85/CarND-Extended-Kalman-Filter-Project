@@ -10,7 +10,7 @@ using std::vector;
 
 VectorXd compute_hx(VectorXd &x)
 {
-  VectorXd h_x;
+  VectorXd h_x(3);
   h_x<<0.0,0.0,0.0;
   h_x(0) = sqrt(pow(x(0),2) + pow(x(1),2));
   h_x(1) = atan(x(1)/x(0));
@@ -33,27 +33,46 @@ FusionEKF::FusionEKF() {
   Hj_ = MatrixXd(3, 4);
 
   //measurement covariance matrix - laser
-  R_laser_ << 0.0225, 0,
+  R_laser_ << 0.0225,0,
         0, 0.0225;
 
   //measurement covariance matrix - radar
-  R_radar_ << 0.09, 0, 0,
+  R_radar_ << 0.09,0,0,
         0, 0.09, 0,
         0, 0, 0.09;
+
+  H_laser_ << 1.0,0.0,0.0,0.0,
+              0.0,1.0,0.0,0.0;
 
   /**
   TODO:
     * Finish initializing the FusionEKF.
     * Set the process and measurement noises
   */
-  ekf_.Q_ << 1.0, 0.0,  1.0,  0.0,
-              0.0, 1.0, 0.0, 1.0,
-              1.0, 0.0, 1.0, 0.0,
-              0.0, 1.0,  0.0,  1.0;
 
+	ekf_.F_ = MatrixXd(4,4);
+	ekf_.F_<< 1.0,0.0,1.0,0.0,
+						0.0,1.0,0.0,1.0,
+						0.0,0.0,1.0,0.0,
+						0.0,0.0,0.0,1.0;
+
+  ekf_.P_ = MatrixXd(4,4);
+  ekf_.P_ << 1.0,0.0, 0.0,0.0,
+             0.0,1.0,0.0,0.0,
+             0.0,0.0,1000,0.0,
+             0.0,0.0,0.0,1000;
+
+  ekf_.Q_ = MatrixXd(4,4);
+  ekf_.Q_ <<  1.0,0.0,1.0,0.0,
+              0.0,1.0,0.0,1.0,
+              1.0,0.0,1.0,0.0,
+              0.0,1.0,0.0,1.0;
+
+  ekf_.R_ = MatrixXd(2,2);
   ekf_.R_ << 1.0,0.0,
              0.0,1.0;
 
+  ekf_.H_ = MatrixXd(2,4);
   ekf_.H_<<1.0,0.0,0.0,0.0,
            0.0,1.0,0.0,0.0;
 
@@ -84,10 +103,12 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     ekf_.x_ = VectorXd(4);
     ekf_.x_ << 1, 1, 1, 1;
 
+		previous_timestamp_ = measurement_pack.timestamp_;
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       /**
       Convert radar from polar to cartesian coordinates and initialize state.
       */
+
       VectorXd radar_measure = measurement_pack.raw_measurements_;
       ekf_.x_(0) = radar_measure(0)*cos(radar_measure(1));
       ekf_.x_(1) = radar_measure(0)*sin(radar_measure(1));
@@ -133,6 +154,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   double noise_ax = 9.0;
   double noise_ay = 9.0;
 
+
   ekf_.Q_(0,0) = (dt_4*noise_ax)/4.0;
   ekf_.Q_(0,2) = (dt_3*noise_ax)/2.0;
   ekf_.Q_(1,1) = (dt_4*noise_ay)/4.0;
@@ -142,8 +164,11 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   ekf_.Q_(3,1) = (dt_3*noise_ay)/2.0;
   ekf_.Q_(3,3) = (dt_2*noise_ay);
 
-  ekf_.Predict();
+	ekf_.F_(0,2) = dt;
+	ekf_.F_(1,3) = dt;
 
+  ekf_.Predict();
+  cout<<"Prediction complete"<<endl;
   /*****************************************************************************
    *  Update
    ****************************************************************************/
@@ -156,23 +181,26 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // Radar updates
+    cout<<"Radar update"<<endl;
     auto z = measurement_pack.raw_measurements_;
     auto h_x = compute_hx(ekf_.x_);
     auto y = z - h_x;
-    ekf_.H_ = tools .CalculateJacobian(ekf_.x_);
-    ekf_.R_ = R_radar_;
-    auto S = ekf_.H_*ekf_.P_*ekf_.H_.transpose() + ekf_.Q_;
-    auto K = ekf_.P_*ekf_.H_.transpose()*S.inverse();
+    Hj_ = tools.CalculateJacobian(ekf_.x_);
+    auto S = Hj_*ekf_.P_*Hj_.transpose() + R_radar_;
+    auto K = ekf_.P_*Hj_.transpose()*S.inverse();
     ekf_.x_ += K*y;
     auto I =  MatrixXd::Identity(4,4);
-    ekf_.P_ =(I-K*ekf_.H_)*ekf_.P_;
+    ekf_.P_ =(I-K*Hj_)*ekf_.P_;
+    cout<<"Radar update complete"<<endl;
     }
 
     else {
     // Laser updates
+    cout<<"Lidar update"<<endl;
     auto z = measurement_pack.raw_measurements_;
-    ekf_.R_ = R_laser_;
-    ekf_.Update(z);
+
+    ekf_.LidarUpdate(z,R_laser_,H_laser_);
+    cout<<"Lidar update complete"<<endl;
   }
 
   // print the output
