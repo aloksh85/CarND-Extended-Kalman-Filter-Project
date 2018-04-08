@@ -38,6 +38,8 @@ private:
   // previous timestamp
   long long previous_timestamp_;
 
+  // counter for initialization
+  int init_counter_;
   // tool object used to compute Jacobian and RMSE
   Tools tools;
   Eigen::MatrixXd R_laser_;

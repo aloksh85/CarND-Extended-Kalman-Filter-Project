@@ -26,15 +26,14 @@ void KalmanFilter::Predict() {
   TODO:
     * predict the state
   */
-  std::cout<<F_<<std::endl;
   x_ = F_*x_;
-  P_ = F_*P_*F_.transpose();
+  P_ = F_*P_*F_.transpose() + Q_;
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
 
   auto y = z - H_*x_;
-  auto S = H_*P_*H_.transpose() + Q_;
+  auto S = H_*P_*H_.transpose() + R_;
   auto K = P_*H_.transpose()*S.inverse();
 
   x_ += K*y;
@@ -50,14 +49,12 @@ void KalmanFilter::LidarUpdate(const VectorXd &z,
   VectorXd y = z - H*x_;
   MatrixXd S = H*P_*H.transpose() + R;
   MatrixXd K = P_*H.transpose()*S.inverse();
-  cout<<"K size: "<<K.size()<<endl;
   x_ += K*y;
 
   auto I =  MatrixXd::Identity(4,4);
-
   P_ = (I-K*H)*P_;
-
 }
+
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
   /**
   TODO:
