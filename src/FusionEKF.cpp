@@ -1,5 +1,4 @@
 #include "FusionEKF.h"
-#include "tools.h"
 #include "Eigen/Dense"
 #include <iostream>
 
@@ -23,6 +22,7 @@ VectorXd compute_hx(VectorXd &x)
 
   return h_x;
 }
+
 
 /*
  * Constructor.
@@ -118,10 +118,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       /**
       Convert radar from polar to cartesian coordinates and initialize state.
       */
-      cout<<"Radar measure for initialize"<<endl;
-
       VectorXd radar_measure = measurement_pack.raw_measurements_;
-      cout<<"measurement: "<< radar_measure<<endl;
 
       VectorXd x = ekf_.x_;
       ekf_.x_(0) = radar_measure(0)*cos(radar_measure(1));
@@ -136,8 +133,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
         ekf_.x_(2) = 0.0;
         ekf_.x_(3) = 0.0;
     }
-
-
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       /**
@@ -145,8 +140,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       */
       double dt = (measurement_pack.timestamp_ - previous_timestamp_)/1000000.0;
       VectorXd lidar_measure  = measurement_pack.raw_measurements_;
-      cout<<"Lidar measure for initialize"<<endl;
-      cout<<"measurement: "<< lidar_measure<<endl;
 
       VectorXd x = ekf_.x_;
       ekf_.x_(0) = lidar_measure(0);
@@ -173,7 +166,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
         init_counter_++;
     }
     previous_timestamp_ = measurement_pack.timestamp_;
-
     return;
   }
 
@@ -195,8 +187,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   double dt_3 = dt_2 * dt;
   double dt_4 = dt_3 * dt;
 
-  double noise_ax = 9.0;
-  double noise_ay = 9.0;
+  double noise_ax = 15.0;
+  double noise_ay = 15.0;
 
 
   ekf_.Q_(0,0) = (dt_4*noise_ax)/4.0;
@@ -211,7 +203,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 	ekf_.F_(0,2) = dt;
 	ekf_.F_(1,3) = dt;
 
-
   ekf_.Predict();
   /*****************************************************************************
    *  Update
@@ -225,23 +216,20 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // Radar updates
-    cout<<"Radar update"<<endl;
-    auto h_x = compute_hx(ekf_.x_);
-    auto y = measurement_pack.raw_measurements_ - h_x;
-    Hj_ = tools.CalculateJacobian(ekf_.x_,Hj_);
-    auto S = Hj_*ekf_.P_*Hj_.transpose() + R_radar_;
-    auto K = ekf_.P_*Hj_.transpose()*S.inverse();
-    ekf_.x_ += K*y;
-    auto I =  MatrixXd::Identity(4,4);
-    ekf_.P_ =(I-K*Hj_)*ekf_.P_;
+    VectorXd h_x = compute_hx(ekf_.x_);
+    Hj_ = tools.CalculateJacobian(ekf_.x_);
+    ekf_.RadarUpdate(measurement_pack.raw_measurements_,
+                     h_x,
+                     Hj_,
+                     R_radar_);
     }
 
     else {
     // Laser updates
-    cout<<"Lidar update"<<endl;
     auto z = measurement_pack.raw_measurements_;
     ekf_.LidarUpdate(z,R_laser_,H_laser_);
   }
+
   previous_timestamp_ = measurement_pack.timestamp_;
   // print the output
   cout << "x_ = " << ekf_.x_ << endl;

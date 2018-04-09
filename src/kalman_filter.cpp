@@ -7,6 +7,7 @@ using namespace std;
 // Please note that the Eigen library does not initialize
 // VectorXd or MatrixXd objects with zeros upon creation.
 
+
 KalmanFilter::KalmanFilter() {}
 
 KalmanFilter::~KalmanFilter() {}
@@ -26,8 +27,12 @@ void KalmanFilter::Predict() {
   TODO:
     * predict the state
   */
-  x_ = F_*x_;
-  P_ = F_*P_*F_.transpose() + Q_;
+  VectorXd temp_x;
+  temp_x = F_*x_;
+  x_ = temp_x;
+  MatrixXd temp_P;
+  temp_P = F_*P_*F_.transpose() + Q_;
+  P_ = temp_P;
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
@@ -43,8 +48,8 @@ void KalmanFilter::Update(const VectorXd &z) {
 
 
 void KalmanFilter::LidarUpdate(const VectorXd &z,
-                              const MatrixXd &R,
-                              const MatrixXd& H) {
+                               const MatrixXd &R,
+                               const MatrixXd& H) {
 
   VectorXd y = z - H*x_;
   MatrixXd S = H*P_*H.transpose() + R;
@@ -53,6 +58,20 @@ void KalmanFilter::LidarUpdate(const VectorXd &z,
 
   auto I =  MatrixXd::Identity(4,4);
   P_ = (I-K*H)*P_;
+}
+
+void KalmanFilter::RadarUpdate(const VectorXd& z,
+                               const VectorXd& h_x,
+                               const MatrixXd& Hj,
+                               const MatrixXd& R
+                               )
+{
+  VectorXd y = z - h_x;
+  MatrixXd S = Hj*P_*Hj.transpose() + R;
+  MatrixXd K = P_*Hj.transpose()*S.inverse();
+  x_ += K*y;
+  auto I =  MatrixXd::Identity(4,4);
+  P_ =(I-K*Hj)*P_;
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {

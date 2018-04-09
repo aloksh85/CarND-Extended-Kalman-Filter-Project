@@ -57,9 +57,27 @@ public:
    * @param z The measurement at k+1
    */
   void Update(const Eigen::VectorXd &z);
+
+  /**
+   * Updates state by using standard KF equations - uses Lidar measurement
+   * @param z The measurement at k+1
+   * @param R Lidar sensor measurement covariance
+   * @param H Lidar sensor model matrix
+   */
   void LidarUpdate(const Eigen::VectorXd &z,
-                                const Eigen::MatrixXd& R,
-                                const Eigen::MatrixXd& H);
+                   const Eigen::MatrixXd& R,
+                   const Eigen::MatrixXd& H);
+/**
+ * Updates state by using standard KF equations - uses Radar measurement
+ * @param z The measurement at k+1
+ * @param R Radar sensor measurement covariance
+ * @param H Radar sensor  Jacobian matrix
+ * @param h_x result of mapping state at k+1 into radar measurement space h(x)
+ */
+  void RadarUpdate(const Eigen::VectorXd& z,
+                   const Eigen::VectorXd& h_x,
+                   const Eigen::MatrixXd& Hj,
+                   const Eigen::MatrixXd& R);
 
   /**
    * Updates the state by using Extended Kalman Filter equations

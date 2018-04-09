@@ -43,7 +43,7 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
 	return rmse;
 }
 
-MatrixXd Tools::CalculateJacobian(const VectorXd& x_state, const MatrixXd& Hj_previous) {
+MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
   /**
   TODO:
     * Calculate a Jacobian here.
@@ -68,8 +68,8 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state, const MatrixXd& Hj_pr
     float denom2 = pow(px_2 + py_2, 0.5);
 
     //check division by zero
-     if (px_2 + py_2 < 0.001)
-     {        std::cout<<"x and y of state are zero. Cannot compute Jacobian"<<std::endl;
+     if (px_2 + py_2 < 0.001){
+        std::cout<<"x and y of state are zero. Cannot compute Jacobian"<<std::endl;
         return Hj;
      }
 
